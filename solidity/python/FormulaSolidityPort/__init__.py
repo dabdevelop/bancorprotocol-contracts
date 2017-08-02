@@ -243,8 +243,6 @@ def calculateSaleReturn(_supply, _reserveBalance, _reserveRatio, _sellAmount):
     Hence before calling the exponentiation function, we need to determine the highest precision which can be used.
     We do this by estimating an upper-bound for "ln(base) * exp", and then choosing the highest precision which this value is permitted for.
     Of course, we should later assert that the actual value representing "ln(base) * exp" is indeed not larger than the maximum exponent of the chosen precision.
-    We can bring accuracy to a maximum by replacing "lnUpperBound(_baseN, _baseD)" with "ln(_baseN, _baseD, MIN_PRECISION) + 1".
-    This, however, will impact performance, so we will need to establish a more efficient (less accurate) implementation of "ln".
     Note that the outcome of this function only affects the accuracy of the computation of "base ^ exp".
     Therefore, we do not need to assert that no intermediate result exceeds 256 bits (nor in this function, neither in any of the functions down the calling tree).
 '''
@@ -284,7 +282,8 @@ def power(_baseN, _baseD, _expN, _expD, _precision):
 '''
 def ln(_numerator, _denominator, _precision):
     assert(0 < _denominator and _denominator <= _numerator and _numerator < (ONE << (256 - _precision)));
-    return fixedLoge( (_numerator << _precision) / _denominator, _precision);
+    res = fixedLog2((_numerator << _precision) / _denominator, _precision);
+    return (res * FLOOR_LN2_MANTISSA) >> FLOOR_LN2_EXPONENT;
 
 '''
     Takes a rational number "numerator / denominator" as input.
@@ -309,14 +308,6 @@ def lnUpperBound(_numerator, _denominator):
     return ceilLog2(_numerator, _denominator) * CEILING_LN2_MANTISSA;
 
 '''
-    Returns floor(ln(x / 2 ^ precision) * 2 ^ precision)
-    Assumes x >= 2 ^ precision
-'''
-def fixedLoge(_x, _precision):
-    res = fixedLog2(_x, _precision);
-    return (res * FLOOR_LN2_MANTISSA) >> FLOOR_LN2_EXPONENT;
-
-'''
     Returns floor(log2(x / 2 ^ precision) * 2 ^ precision)
     Assumes x >= 2 ^ precision
 
@@ -326,26 +317,26 @@ def fixedLoge(_x, _precision):
         output    between 0                 and floor(log2(2 ^ (256 - MAX_PRECISION) - 1) * 2 ^ MAX_PRECISION)
 '''
 def fixedLog2(_x, _precision):
-    hi = 0;
+    res = 0;
+
     fixedOne = ONE << _precision;
     fixedTwo = TWO << _precision;
 
-    # Here we compute the integer part of log2(x).
-    # If x >= 2, then the integer part of log2(x) > 0.
-    # We assume that x is not much greater than 2, and perform a simple bit-count.
-    # If this is not the case, then we need to use floorLog2 for better performance.
-    while (_x >= fixedTwo):
-        _x >>= 1;
-        hi += fixedOne;
+    # If x >= 2, then we compute the integer part of log2(x), which is larger than 0.
+    if (_x >= fixedTwo):
+        count = floorLog2(_x / fixedOne);
+        _x >>= count;
+        res = count * fixedOne;
 
-    # At this point, knowing that 1 <= x < 2, we compute the fraction part of log2(x).
-    for i in range(_precision):
-        _x = (_x * _x) / fixedOne; # now 1 <= x < 4
-        if (_x >= fixedTwo):
-            _x >>= 1; # now 1 <= x < 2
-            hi += ONE << (_precision - 1 - i);
+    # If x > 1, then we compute the fraction part of log2(x), which is larger than 0.
+    if (_x > fixedOne):
+        for i in range(_precision):
+            _x = (_x * _x) / fixedOne; # now 1 < x < 4
+            if (_x >= fixedTwo):
+                _x >>= 1; # now 1 < x < 2
+                res += ONE << (i - 1);
 
-    return hi;
+    return res;
 
 '''
     Takes a rational number "numerator / denominator" as input.
@@ -359,13 +350,19 @@ def ceilLog2(_numerator, _denominator):
     Returns the largest integer smaller than or equal to the binary logarithm of the input.
 '''
 def floorLog2(_n):
-    t = 0;
-    for s in [1 << (8 - 1 - k) for k in range(8)]:
-        if (_n >= (ONE << s)):
-            _n >>= s;
-            t |= s;
+    res = 0;
 
-    return t;
+    if (_n < 256):
+        while (_n > 1):
+            _n >>= 1;
+            res += 1;
+    else:
+        for s in [1 << (8 - 1 - k) for k in range(8)]:
+            if (_n >= (ONE << s)):
+                _n >>= s;
+                res |= s;
+
+    return res;
 
 '''
     fixedExp is a 'protected' version of fixedExpUnsafe, which asserts instead of overflows.
