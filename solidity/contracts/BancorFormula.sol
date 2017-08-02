@@ -354,11 +354,11 @@ contract BancorFormula is IBancorFormula, Utils {
         }
 
         // At this point, knowing that 1 <= x < 2, we compute the fraction part of log2(x).
-        for (uint8 i = 0; i < _precision; ++i) {
+        for (uint8 i = _precision; i > 0; --i) {
             _x = (_x * _x) / fixedOne; // now 1 <= x < 4
             if (_x >= fixedTwo) {
                 _x >>= 1; // now 1 <= x < 2
-                res += ONE << (_precision - 1 - i);
+                res += ONE << (i - 1);
             }
         }
 
