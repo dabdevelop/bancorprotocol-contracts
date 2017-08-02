@@ -303,7 +303,8 @@ contract BancorFormula is IBancorFormula, Utils {
     */
     function ln(uint256 _numerator, uint256 _denominator, uint8 _precision) internal constant returns (uint256) {
         assert(0 < _denominator && _denominator <= _numerator && _numerator < (ONE << (256 - _precision)));
-        return fixedLoge( (_numerator << _precision) / _denominator, _precision);
+        uint256 res = fixedLog2((_numerator << _precision) / _denominator, _precision);
+        return (res * FLOOR_LN2_MANTISSA) >> FLOOR_LN2_EXPONENT;
     }
 
     /**
@@ -327,15 +328,6 @@ contract BancorFormula is IBancorFormula, Utils {
             return SCALED_VAL_3P0;
 
         return ceilLog2(_numerator, _denominator) * CEILING_LN2_MANTISSA;
-    }
-
-    /**
-        Returns floor(ln(x / 2 ^ precision) * 2 ^ precision)
-        Assumes x >= 2 ^ precision
-    */
-    function fixedLoge(uint256 _x, uint8 _precision) internal constant returns (uint256) {
-        uint256 res = fixedLog2(_x, _precision);
-        return (res * FLOOR_LN2_MANTISSA) >> FLOOR_LN2_EXPONENT;
     }
 
     /**

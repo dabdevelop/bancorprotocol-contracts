@@ -87,10 +87,10 @@ contract('BancorFormula', () => {
             }
         });
 
-        it('Verify function fixedLoge mantissa', async () => {
+        it('Verify function ln mantissa', async () => {
             let x = maxNumerator.times(web3.toBigNumber(2).toPower(precision)).dividedToIntegerBy(minDenominator);
             let retval = await formula.testFixedLog2.call(x, precision);
-            assert(retval.times(FLOOR_LN2_MANTISSA).lessThan(LIMIT), `Result of function fixedLog2(${x}, ${precision}) indicates that mantissa used in function fixedLoge is wrong`);
+            assert(retval.times(FLOOR_LN2_MANTISSA).lessThan(LIMIT), `Result of function fixedLog2(${x}, ${precision}) indicates that mantissa used in function ln is wrong`);
         });
     }
 });
