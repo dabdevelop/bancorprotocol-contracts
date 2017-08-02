@@ -330,7 +330,7 @@ def fixedLog2(_x, _precision):
 
     # If x > 1, then we compute the fraction part of log2(x), which is larger than 0.
     if (_x > fixedOne):
-        for i in range(_precision):
+        for i in range(_precision, 0, -1):
             _x = (_x * _x) / fixedOne; # now 1 < x < 4
             if (_x >= fixedTwo):
                 _x >>= 1; # now 1 < x < 2
