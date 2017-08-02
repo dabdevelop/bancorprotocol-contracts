@@ -382,7 +382,7 @@ contract BancorFormula is IBancorFormula, Utils {
         if (_n < 256) {
             while (_n > 1) {
                 _n >>= 1;
-                res++;
+                res += 1;
             }
         }
         else {
