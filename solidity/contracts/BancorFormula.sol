@@ -341,16 +341,15 @@ contract BancorFormula is IBancorFormula, Utils {
     */
     function fixedLog2(uint256 _x, uint8 _precision) internal constant returns (uint256) {
         uint256 res = 0;
+
         uint256 fixedOne = ONE << _precision;
         uint256 fixedTwo = TWO << _precision;
 
-        // Here we compute the integer part of log2(x).
-        // If x >= 2, then the integer part of log2(x) > 0.
-        // We assume that x is not much greater than 2, and perform a simple bit-count.
-        // If this is not the case, then we need to use floorLog2 for better performance.
-        while (_x >= fixedTwo) {
-            _x >>= 1;
-            res += fixedOne;
+        // If x >= 2, then we compute the integer part of log2(x), which is larger than 0.
+        if (_x >= fixedTwo) {
+            uint256 count = floorLog2(_x / fixedOne);
+            _x >>= count;
+            res = count * fixedOne;
         }
 
         // At this point, knowing that 1 <= x < 2, we compute the fraction part of log2(x).
@@ -379,10 +378,19 @@ contract BancorFormula is IBancorFormula, Utils {
     */
     function floorLog2(uint256 _n) internal constant returns (uint256) {
         uint8 res = 0;
-        for (uint8 s = 128; s > 0; s >>= 1) {
-            if (_n >= (ONE << s)) {
-                _n >>= s;
-                res |= s;
+
+        if (_n < 256) {
+            while (_n > 1) {
+                _n >>= 1;
+                res++;
+            }
+        }
+        else {
+            for (uint8 s = 128; s > 0; s >>= 1) {
+                if (_n >= (ONE << s)) {
+                    _n >>= s;
+                    res |= s;
+                }
             }
         }
 
