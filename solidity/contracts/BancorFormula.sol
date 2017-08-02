@@ -348,7 +348,7 @@ contract BancorFormula is IBancorFormula, Utils {
             output    between 0                 and floor(log2(2 ^ (256 - MAX_PRECISION) - 1) * 2 ^ MAX_PRECISION)
     */
     function fixedLog2(uint256 _x, uint8 _precision) internal constant returns (uint256) {
-        uint256 hi = 0;
+        uint256 res = 0;
         uint256 fixedOne = ONE << _precision;
         uint256 fixedTwo = TWO << _precision;
 
@@ -358,7 +358,7 @@ contract BancorFormula is IBancorFormula, Utils {
         // If this is not the case, then we need to use floorLog2 for better performance.
         while (_x >= fixedTwo) {
             _x >>= 1;
-            hi += fixedOne;
+            res += fixedOne;
         }
 
         // At this point, knowing that 1 <= x < 2, we compute the fraction part of log2(x).
@@ -366,11 +366,11 @@ contract BancorFormula is IBancorFormula, Utils {
             _x = (_x * _x) / fixedOne; // now 1 <= x < 4
             if (_x >= fixedTwo) {
                 _x >>= 1; // now 1 <= x < 2
-                hi += ONE << (_precision - 1 - i);
+                res += ONE << (_precision - 1 - i);
             }
         }
 
-        return hi;
+        return res;
     }
 
     /**
@@ -386,15 +386,15 @@ contract BancorFormula is IBancorFormula, Utils {
         Returns the largest integer smaller than or equal to the binary logarithm of the input.
     */
     function floorLog2(uint256 _n) internal constant returns (uint256) {
-        uint8 t = 0;
+        uint8 res = 0;
         for (uint8 s = 128; s > 0; s >>= 1) {
             if (_n >= (ONE << s)) {
                 _n >>= s;
-                t |= s;
+                res |= s;
             }
         }
 
-        return t;
+        return res;
     }
 
     /**
